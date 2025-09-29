@@ -26,7 +26,7 @@ def create_user(first_name: str, last_name: str, birthday: str = "") -> None:
     userlist = load_userlist()
 
     # Neue eindeutige ID erzeugen
-    new_id = str(len(userlist) + 1)
+    new_id = (str(len(userlist) + 1)).zfill(3)
 
     # Ordnername: First_Last
     user_folder = f"{first_name}_{last_name}"
