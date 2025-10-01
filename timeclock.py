@@ -97,3 +97,14 @@ def clock(user_id: str) -> str:
     save_timestamps(timestamps_path, timestamps)
 
     return message
+
+
+def clock_with_nfc(nfc_code: str) -> str:
+    """Führt Login/Logout anhand eines NFC-Codes aus."""
+    userlist = load_userlist()
+
+    for user_id, data in userlist.items():
+        if data.get("nfc_code") == nfc_code:
+            return clock(user_id)
+
+    return f"Unbekannter NFC-Code: {nfc_code}"
