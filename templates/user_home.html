@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Mitarbeiterbereich</title>
+    <script>
+        async function clockUser(userId) {
+            const responseBox = document.getElementById("response");
+            responseBox.innerText = "Wird gesendet...";
+            try {
+                const response = await fetch("/api/clock", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                responseBox.innerText = data.message || "Unbekannte Antwort.";
+                setTimeout(() => window.location.reload(), 2000);
+            } catch {
+                responseBox.innerText = "Fehler beim Senden der Anfrage.";
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Willkommen, {{ name }}</h1>
+    {% if 'Admin-Ansicht' not in name %}
+    <button onclick="clockUser('{{ user_id }}')">An- / Abmelden</button>
+    {% endif %}
+
+    {% if 'Admin-Ansicht' not in name %}
+    <p><a href="/logout">Logout</a></p>
+    {% endif %}
+
+    <hr>
+    <h2>Arbeitszeit-Übersicht</h2>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <tr><th>Zeitraum</th><th>Gesamtzeit</th></tr>
+        <tr><td>Heute</td><td>{{ today_hours }}</td></tr>
+        <tr><td>Diese Woche</td><td>{{ week_hours }}</td></tr>
+        <tr><td>Diesen Monat</td><td>{{ month_hours }}</td></tr>
+    </table>
+    <hr>
+    <h2>Heutige Buchungen</h2>
+    {% if timestamps %}
+        <table border="1" cellpadding="6" cellspacing="0">
+            <tr><th>Typ</th><th>Zeit</th></tr>
+            {% for t in timestamps %}
+                <tr><td>{{ t.type }}</td><td>{{ t.time }}</td></tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Heute noch keine Buchungen.</p>
+    {% endif %}
+    <hr>
+    <h3>Rückmeldung</h3>
+    <pre id="response">Noch keine Aktion durchgeführt.</pre>
+</body>
+</html>
