@@ -3,13 +3,11 @@
 import nfc
 import json
 import os
-import requests
 from datetime import datetime
-
-# Adresse deines lokalen Webservers
-API_URL = "http://localhost:8080/api/clock"
+from timeclock import clock_with_nfc
 
 UNKNOWN_CARDS_FILE = "unknown_cards.json"
+PENDING_FILE = "pending_nfc.json"
 
 
 def save_unknown_card(nfc_code: str):
@@ -35,17 +33,15 @@ def save_unknown_card(nfc_code: str):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
-def send_to_api(user_id: str):
-    """Sendet den Clock-Vorgang an den Webserver."""
-    try:
-        response = requests.post(API_URL, json={"user_id": user_id}, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            print(f"✅ Serverantwort: {data.get('message', 'OK')}")
-        else:
-            print(f"❌ Fehler vom Server: HTTP {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        print(f"⚠️ Keine Verbindung zum Server: {e}")
+def save_pending_card(nfc_code: str):
+    """Speichert den zuletzt eingelesenen NFC-Code in pending_nfc.json."""
+    entry = {
+        "nfc_code": nfc_code,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    with open(PENDING_FILE, "w", encoding="utf-8") as f:
+        json.dump(entry, f, indent=4, ensure_ascii=False)
+    print(f"💾 Letzte Karte gespeichert ({nfc_code}) → pending_nfc.json")
 
 
 def on_connect(tag):
@@ -53,9 +49,16 @@ def on_connect(tag):
     nfc_id = tag.identifier.hex().upper()
     print(f"\n📶 Karte erkannt: {nfc_id}")
 
-    # Versuche, die Karte über den Webserver zu verarbeiten
-    send_to_api(nfc_id)
+    # Letzten NFC-Code immer speichern (für Admin-Zuordnung)
+    save_pending_card(nfc_id)
 
+    # Danach normale Verarbeitung
+    result = clock_with_nfc(nfc_id)
+
+    if "Unbekannter NFC-Code" in result:
+        save_unknown_card(nfc_id)
+
+    print(result)
     print("-" * 50)
     return False  # nur einmal pro Karte reagieren
 
