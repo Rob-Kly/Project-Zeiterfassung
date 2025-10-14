@@ -6,12 +6,36 @@ from user_management import add_user, remove_user, update_user
 from datetime import datetime, timedelta
 from calendar import monthrange
 import os, json
+
 app = Flask(__name__)
 app.secret_key = "zeiterfassung_secret_key"  # TODO: In Produktion sicher speichern
 
 # Sitzung läuft 5 Minuten (300 Sekunden)
 SESSION_TIMEOUT = 300  # Sekunden
 
+
+# ==========================================================
+# STARTSEITE (Root)
+# ==========================================================
+@app.route("/")
+def index():
+    """
+    Leitet automatisch zur passenden Seite weiter:
+    - Admin → Admin-Panel
+    - Benutzer → Benutzer-Startseite
+    - Nicht eingeloggt → Login-Seite
+    """
+    if "user_id" in session:
+        if session.get("role") == "admin":
+            return redirect(url_for("admin_panel"))
+        else:
+            return redirect(url_for("user_home"))
+    return redirect(url_for("login"))
+
+
+# ==========================================================
+# SESSION HANDLING / TIMEOUT
+# ==========================================================
 @app.before_request
 def session_timeout_check():
     """Beendet Sitzung nach 5 Minuten Inaktivität."""
@@ -202,7 +226,7 @@ def admin_view_user(user_id):
 
     name = f"{user['first_name']} {user['last_name']}"
     user_folder = user["folder"]
-    timestamps_path = os.path.join(user_folder, f"{user_folder}_timestamps.txt")
+    timestamps_path = os.path.join(user_folder, f"{user['folder']}_timestamps.txt")
     timestamps = load_timestamps(timestamps_path)
 
     today = datetime.now().date()
@@ -346,6 +370,7 @@ def api_reports():
         year, month = now.year, now.month
     return jsonify(get_monthly_report(year, month)), 200
 
+
 @app.route("/api/pending_nfc")
 def api_pending_nfc():
     """Liest den zuletzt eingelesenen NFC-Code aus und löscht ihn danach."""
@@ -364,8 +389,6 @@ def api_pending_nfc():
             return jsonify({"nfc_code": None})
     else:
         return jsonify({"nfc_code": None})
-
-
 
 
 # ==========================================================
