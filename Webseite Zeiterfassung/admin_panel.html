@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Adminbereich</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            background-image: url('background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            height: 100vh;
+            color: white;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 0;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            padding: 40px;
+            max-width: 1000px;
+            margin: auto;
+        }
+        a {
+            color: #aad;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            border: 1px solid white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        form input, form select {
+            padding: 8px;
+            margin: 8px 5px 16px 0;
+            border-radius: 4px;
+            border: none;
+            width: 180px;
+        }
+
+        form button {
+            padding: 10px 20px;
+            font-size: 14px;
+            background-color: #2277cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background-color: #1155aa;
+        }
+
+        hr {
+            border-color: white;
+            margin: 40px 0 20px;
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+        }
+        .link-row {
+            margin-bottom: 20px;
+        }
+
+
+
+
+
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="content">
+
+        <h1>Administratorbereich – Willkommen, {{ name }}</h1>
+
+        <div class="link-row">
+            <p><a href="/logout">Logout</a> | <a href="/admin/fix_errors">Fehlerzeiten korrigieren</a></p>
+
+            <hr>
+        </div>
+
+        <h2>Benutzerverwaltung</h2>
+        <table border="1" cellpadding="6" cellspacing="0">
+            <tr><th>User-ID</th><th>Name</th><th>Rolle</th><th>Aktionen</th></tr>
+            {% for uid, user in users.items() %}
+                <tr>
+                    <td>{{ uid }}</td>
+                    <td><a href="/admin/user/{{ uid }}">{{ user.first_name }} {{ user.last_name }}</a></td>
+                    <td>{{ user.role }}</td>
+                    <td>
+                        <a href="/admin/edit_user/{{ uid }}">Bearbeiten</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        <h3>Neuen Benutzer anlegen</h3>
+        <form method="POST" action="/admin/add_user">
+            <!-- KEINE User-ID mehr -->
+            <input name="first_name" placeholder="Vorname" required>
+            <input name="last_name" placeholder="Nachname" required>
+            <input name="nfc_code" placeholder="NFC-Code">
+            <input name="password" placeholder="Passwort" required>
+            <select name="role">
+                <option value="user">Mitarbeiter</option>
+                <option value="admin">Administrator</option>
+            </select>
+            <button type="submit">Anlegen</button>
+        </form>
+
+        <hr>
+        <h2>Monatsreport ({{ report.year }}-{{ '%02d' % report.month }})</h2>
+        <table border="1" cellpadding="6" cellspacing="0">
+            <tr><th>User-ID</th><th>Name</th><th>Gesamtstunden</th></tr>
+            {% for uid, data in report.users.items() %}
+                <tr>
+                    <td>{{ uid }}</td>
+                    <td>{{ data.name }}</td>
+                    <td>{{ data.total_hm }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+</body>
+</html>
