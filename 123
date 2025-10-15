@@ -1,0 +1,1 @@
+python3 -c "import subprocess; print(subprocess.run(['nfc-list'], capture_output=True, text=True).stdout)"
