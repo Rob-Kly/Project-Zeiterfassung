@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Adminbereich</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin_panel.css') }}">
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="content">
+        <h1>Administratorbereich – Willkommen, {{ name }}</h1>
+
+        <p>
+            <a href="/logout">Logout</a> |
+            <a href="/admin/fix_errors">Fehlerzeiten korrigieren</a>
+        </p>
+
+        <button onclick="clockUser('{{ admin_id }}')">An- / Abmelden</button>
+        <pre id="response"></pre>
+
+        {% if has_pending_corrections %}
+            <div class="warning-box">
+                <span class="warning-icon">⚠️</span>
+                <span>Neue automatisch gesetzte Buchungen erkannt!<br>
+                Bitte „Fehlerzeiten korrigieren“ öffnen.</span>
+            </div>
+        {% endif %}
+
+        <hr>
+
+        <h2>Benutzerverwaltung</h2>
+        <table>
+            <tr><th>User-ID</th><th>Name</th><th>Rolle</th><th>Aktionen</th></tr>
+            {% for uid, user in users.items() %}
+                <tr>
+                    <td>{{ uid }}</td>
+                    <td><a href="/admin/user/{{ uid }}">{{ user.first_name }} {{ user.last_name }}</a></td>
+                    <td>{{ user.role }}</td>
+                    <td><a href="/admin/edit_user/{{ uid }}">Bearbeiten</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        <h3>Neuen Benutzer anlegen</h3>
+        <form method="POST" action="/admin/add_user">
+            <input name="first_name" placeholder="Vorname" required>
+            <input name="last_name" placeholder="Nachname" required>
+            <input name="nfc_code" placeholder="NFC-Code">
+            <input name="password" placeholder="Passwort" required>
+            <select name="role">
+                <option value="user">Mitarbeiter</option>
+                <option value="admin">Administrator</option>
+            </select>
+            <button type="submit">Anlegen</button>
+        </form>
+
+        <hr>
+        <h2>Monatsreport ({{ report.year }}-{{ '%02d' % report.month }})</h2>
+        <table>
+            <tr><th>User-ID</th><th>Name</th><th>Gesamtstunden</th></tr>
+            {% for uid, data in report.users.items() %}
+                <tr>
+                    <td>{{ uid }}</td>
+                    <td>{{ data.name }}</td>
+                    <td>{{ data.total_hm }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

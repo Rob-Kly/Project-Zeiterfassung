@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login – Zeiterfassung</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+
+
+</head>
+<body>
+    <img class="background" src="{{ url_for('static', filename='background.png') }}" alt="Hintergrund">
+    <h1 class="login">Login</h1>
+    <div class="error">
+        {% if error %}
+        <p>{{ error }}</p>
+        {% endif %}
+    </div>
+    
+    <div class="Tabelle">
+        <form method="POST">
+            <label for="username">Benutzername (Vorname Nachname):</label><br>
+            <input class="Feld" type="text" name="username" required><br><br>
+            <label for="password">Passwort:</label><br>
+            <input class="Feld" type="password" name="password" required><br><br>
+            <button class="Anmelden" type="submit">Anmelden</button>
+        </form>
+    </div>
+</body>
+</html>
