@@ -54,7 +54,7 @@ def login():
                     return redirect(url_for("admin_panel"))
                 return redirect(url_for("user_home"))
 
-        return render_template("login.html", error="Falscher Benutzername oder Passwort.")
+        return render_template("login.html", error="Falscher Benutzername oder Passwort!")
 
     return render_template("login.html")
 
