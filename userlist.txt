@@ -1,0 +1,18 @@
+{
+    "1": {
+        "first_name": "Max",
+        "last_name": "Mustermann",
+        "nfc_code": "04AABBCC",
+        "folder": "user_1",
+        "password": "test123",
+        "role": "admin"
+    },
+    "2": {
+        "first_name": "Anna",
+        "last_name": "Mitarbeiter",
+        "nfc_code": "04EEFFGG",
+        "folder": "user_2",
+        "password": "1234",
+        "role": "user"
+    }
+}
