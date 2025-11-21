@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Vergangene Monatsreports</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Überlagerung zur Abdunklung des Hintergrundbilds -->
+    <div class="overlay"></div>
+
+    <!-- Hauptinhalt: Liste aller vorhandenen Monatsreports -->
+    <div class="content">
+        <!-- Überschrift -->
+        <h1>Vergangene Monatsreports</h1>
+
+        <!-- Link zurück zum Adminbereich -->
+        <p>
+            <a href="{{ url_for('admin_panel') }}" class="back-link">Zurück zum Adminbereich</a>
+        </p>
+
+        <!-- Tabelle mit allen gespeicherten Monatsreports -->
+        {% if reports %}
+            <table>
+                <tr>
+                    <th>Jahr</th>
+                    <th>Monat</th>
+                    <th>Aktion</th>
+                </tr>
+                {% for r in reports %}
+                    <tr>
+                        <td>{{ r.year }}</td>
+                        <td>{{ '%02d' % r.month }}</td>
+                        <td>
+                            <a href="{{ url_for('admin_view_report',
+                                                year=r.year,
+                                                month=r.month) }}">
+                                Anzeigen
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <!-- Hinweis, falls noch keine Reports vorliegen -->
+            <p>Es wurden noch keine Reports gefunden.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+{#
+    Gemeinsames Formular-Makro für Benutzerverwaltung:
+    - Nutzung bei Erstinstallation, Admin-Bereich und Edit-User-Seite
+#}
+{% macro user_form(user=None, password_required=True, show_role=True) %}
+
+    <!-- Zeile: Vor- und Nachname -->
+    <div class="form-row">
+        <div class="form-col">
+            <label>Vorname:</label>
+            <input class="Feld" type="text" name="first_name"
+                   value="{{ user.first_name if user is not none else '' }}"
+                   required>
+        </div>
+
+        <div class="form-col">
+            <label>Nachname:</label>
+            <input class="Feld" type="text" name="last_name"
+                   value="{{ user.last_name if user is not none else '' }}"
+                   required>
+        </div>
+    </div>
+
+    <!-- Zeile: NFC-Code und Rolle -->
+    <div class="form-row">
+        <div class="form-col">
+            <label>NFC-Code:</label>
+            <input class="Feld" type="text" name="nfc_code"
+                   placeholder="(optional)"
+                   value="{{ user.nfc_code if (user is not none and user.nfc_code) else '' }}">
+        </div>
+
+        {% if show_role %}
+        <div class="form-col">
+            <label>Rolle:</label>
+            <select name="role" class="Feld">
+                <option value="user"
+                    {% if user is not none and user.role == 'user' %}selected{% endif %}>
+                    Mitarbeiter
+                </option>
+                <option value="admin"
+                    {% if user is not none and user.role == 'admin' %}selected{% endif %}>
+                    Administrator
+                </option>
+            </select>
+        </div>
+        {% else %}
+        <div class="form-col"></div>
+        {% endif %}
+    </div>
+
+    <!-- Zeile: Passwort und Wiederholung -->
+    <div class="form-row">
+        <div class="form-col">
+            <label>
+                Passwort{% if not password_required %} (leer lassen = keine Änderung){% endif %}:
+            </label>
+            <input class="Feld" type="password" name="password"
+                   {% if password_required %}required{% endif %}>
+        </div>
+
+        <div class="form-col">
+            <label>Psw. wiederholen:</label>
+            <input class="Feld" type="password" name="password2"
+                   {% if password_required %}required{% endif %}>
+        </div>
+    </div>
+
+    <!-- Hinweis zu Passwortanforderungen -->
+    <p class="password-hint">
+        Mindestanforderungen: ≥ 8 Zeichen, Groß- &amp; Kleinschreibung, Zahl oder Sonderzeichen.
+    </p>
+
+{% endmacro %}

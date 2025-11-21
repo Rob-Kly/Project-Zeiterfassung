@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Nutzer bearbeiten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Überlagerung zur Abdunklung des Hintergrundbilds -->
+    <div class="overlay"></div>
+
+    <!-- Logout-Schaltfläche oben rechts -->
+    <div class="top-right-logout">
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    <!-- Hauptinhalt der Bearbeitungsseite -->
+    <div class="content">
+
+        {% from "user_form_macros.html" import user_form %}
+
+        <!-- Überschrift -->
+        <h1>Nutzer bearbeiten</h1>
+
+        <!-- Bereich für mögliche Fehlermeldungen -->
+        {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <!-- Formular zum Bearbeiten der Stammdaten -->
+        <form method="POST" id="edit-user-form">
+            {{ user_form(user=user, password_required=False, show_role=True) }}
+            <button type="button" onclick="loadPending()">Letzte eingelegte Karte übernehmen</button><br><br>
+            <button type="submit">Speichern</button>
+        </form>
+
+        <hr>
+
+        <!-- Abschnitt zum Entfernen eines Benutzers -->
+        <div class="delete-section">
+            <h3>Nutzer löschen</h3>
+            <p>
+                Beim Löschen des Nutzers bleibt der zugehörige Ordner mit allen Zeiterfassungsdaten erhalten.
+                Eine Anmeldung im System ist anschließend nicht mehr möglich.
+            </p>
+            <form method="GET"
+                  action="{{ url_for('admin_remove_user', user_id=user_id) }}"
+                  onsubmit="return confirm('Diesen Nutzer wirklich löschen?');">
+                <button type="submit" class="delete-button">Nutzer löschen</button>
+            </form>
+        </div>
+
+        <!-- Link zurück zum Adminbereich -->
+        <p>
+            <a href="{{ url_for('admin_panel') }}" class="back-link">Zurück zum Adminbereich</a>
+        </p>
+
+        <script>
+        // Referenz auf das NFC-Code-Eingabefeld
+        const nfcField = document.querySelector('[name="nfc_code"]');
+        const originalNfcValue = nfcField ? nfcField.value.trim() : "";
+
+        // Abruf des zuletzt gescannten NFC-Codes aus dem Zwischenspeicher
+        async function loadPending() {
+            if (!nfcField) {
+                alert("Kein NFC-Code-Feld gefunden.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/pending_nfc');
+                const data = await res.json();
+
+                if (data.nfc_code) {
+                    const current = nfcField.value.trim();
+
+                    if (current && current !== data.nfc_code) {
+                        const overwrite = confirm(
+                            "Dieser Nutzer hat bereits einen NFC-Code.\n" +
+                            "Soll der vorhandene Code wirklich überschrieben werden?"
+                        );
+                        if (!overwrite) {
+                            return;
+                        }
+                    }
+
+                    nfcField.value = data.nfc_code;
+
+                    if (data.timestamp) {
+                        alert(
+                            "NFC-Code übernommen: " + data.nfc_code +
+                            "\nZuletzt gescannt: " + data.timestamp +
+                            "\n(Der Code wurde aus dem Zwischenspeicher gelöscht.)"
+                        );
+                    } else {
+                        alert(
+                            "NFC-Code übernommen: " + data.nfc_code +
+                            "\n(Der Code wurde aus dem Zwischenspeicher gelöscht.)"
+                        );
+                    }
+                } else {
+                    alert("Keine neue Karte erkannt.");
+                }
+            } catch (e) {
+                alert("Fehler beim Abrufen der NFC-Daten.");
+            }
+        }
+
+        // Sicherheitsabfrage beim Ändern des NFC-Codes
+        const form = document.getElementById('edit-user-form');
+        if (form && nfcField) {
+            form.addEventListener('submit', function (e) {
+                const current = nfcField.value.trim();
+                if (originalNfcValue && current && current !== originalNfcValue) {
+                    const ok = confirm(
+                        "Dieser Nutzer hat bereits einen NFC-Code.\n" +
+                        "Soll der vorhandene Code wirklich überschrieben werden?"
+                    );
+                    if (!ok) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        }
+        </script>
+    </div>
+</body>
+</html>

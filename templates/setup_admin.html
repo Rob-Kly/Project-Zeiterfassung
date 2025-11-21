@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erstinstallation – Admin anlegen</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Hintergrundbild -->
+    <img class="background" src="{{ url_for('static', filename='background.png') }}" alt="Hintergrund">
+
+    <!-- Seitenüberschrift -->
+    <h1 class="login">Willkommen im EBC-Zeiterfassungssystem</h1>
+
+    <!-- Bereich für Fehlermeldungen -->
+    <div class="error">
+        {% if error %}
+        <p>{{ error }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Erläuterung zur Erstinstallation -->
+    <h2 class="login-subtitle">
+        Bitte einen ersten Administrator anlegen.
+    </h2>
+
+    {% from "user_form_macros.html" import user_form %}
+
+    <!-- Formular zur Anlage des ersten Administrators -->
+    <div class="Tabelle">
+        <form method="POST">
+            {{ user_form(user=None, password_required=True, show_role=False) }}
+            <button class="Anmelden" type="submit">Admin erstellen</button>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Mitarbeiterbereich</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        // Senden einer Kommen-/Gehen-Buchung über die API
+        async function clockUser(userId) {
+            const responseBox = document.getElementById("response");
+            if (responseBox) {
+                responseBox.innerText = "Wird gesendet...";
+            }
+            try {
+                const response = await fetch("/api/clock", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await response.json();
+                if (responseBox) {
+                    responseBox.innerText = data.message || "Unbekannte Antwort.";
+                }
+                setTimeout(() => window.location.reload(), 2000);
+            } catch {
+                if (responseBox) {
+                    responseBox.innerText = "Fehler beim Senden der Anfrage.";
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- Überlagerung zur Abdunklung des Hintergrundbilds -->
+    <div class="overlay"></div>
+
+    <!-- Logout-Schaltfläche oben rechts -->
+    <div class="top-right-logout">
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    <!-- Hauptinhalt der Mitarbeiterseite -->
+    <div class="content">
+        <h1>Willkommen, {{ name }}</h1>
+
+        <!-- Kommen/Gehen nur in der normalen Mitarbeiteransicht -->
+        {% if 'Admin-Ansicht' not in name %}
+        <button onclick="clockUser('{{ user_id }}')">Kommen / Gehen</button>
+        <pre id="response"></pre>
+        {% endif %}
+
+        <hr>
+
+        <!-- Übersicht über bereits geleistete Arbeitszeiten -->
+        <h2>Arbeitszeit-Übersicht</h2>
+        <table>
+            <tr><th>Zeitraum</th><th>Gesamtzeit</th></tr>
+            <tr><td>Heute</td><td>{{ today_hours }}</td></tr>
+            <tr><td>Diese Woche</td><td>{{ week_hours }}</td></tr>
+            <tr><td>Diesen Monat</td><td>{{ month_hours }}</td></tr>
+        </table>
+
+        <hr>
+
+        <!-- Tabelle mit den Buchungen des aktuellen Tages -->
+        <h2>Heutige Buchungen</h2>
+        {% if timestamps %}
+            <table>
+                <tr><th>Typ</th><th>Zeit</th></tr>
+                {% for t in timestamps %}
+                    <tr><td>{{ t.type }}</td><td>{{ t.time }}</td></tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>Heute noch keine Buchungen.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

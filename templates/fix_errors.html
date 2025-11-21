@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Fehlerzeiten korrigieren</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Überlagerung zur Abdunklung des Hintergrundbilds -->
+    <div class="overlay"></div>
+
+    <!-- Hauptinhalt: Übersicht der zu korrigierenden Einträge -->
+    <div class="content">
+        <h1>Fehlerzeiten korrigieren</h1>
+
+        <!-- Kurze Erläuterung -->
+        <p>
+            Hier können automatisch gesetzte Einträge angepasst werden:
+            <strong>Auto-Login {{ start_h }} Uhr</strong> (Typ: in) und
+            <strong>Auto-Logout {{ end_h }} Uhr</strong> (Typ: out).
+        </p>
+
+        <!-- Auflistung aller betroffenen Benutzer -->
+        {% if candidates %}
+            {% for uid, data in candidates.items() %}
+                <h2>{{ data.name }} (ID {{ uid }})</h2>
+                <table>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Typ</th>
+                        <th>Neue Uhrzeit</th>
+                        <th>Aktion</th>
+                    </tr>
+                    {% for e in data.entries %}
+                    <tr>
+                        <form method="POST" action="{{ url_for('apply_fix_error') }}">
+                            <!-- Spalte: Datum -->
+                            <td>
+                                {{ e.date }}
+                                <input type="hidden" name="date" value="{{ e.date }}">
+                            </td>
+
+                            <!-- Spalte: Typ (in/out) -->
+                            <td>
+                                {{ e.type }}
+                                <input type="hidden" name="type" value="{{ e.type }}">
+                            </td>
+
+                            <!-- Spalte: Eingabefeld für neue Uhrzeit -->
+                            <td>
+                                <input name="new_time"
+                                       placeholder="HH:MM"
+                                       pattern="\\d{2}:\\d{2}"
+                                       required>
+                                <input type="hidden" name="user_id" value="{{ uid }}">
+                            </td>
+
+                            <!-- Spalte: Aktionen (Speichern/Übernehmen) -->
+                            <td>
+                                <button type="submit" name="action" value="save">Speichern</button>
+                                <button type="submit"
+                                        name="action"
+                                        value="accept"
+                                        formnovalidate>
+                                    Übernehmen
+                                </button>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </table>
+            {% endfor %}
+        {% else %}
+            <!-- Hinweis, wenn keine automatisch gesetzten Einträge existieren -->
+            <p>Aktuell keine automatisch gesetzten Einträge gefunden.</p>
+        {% endif %}
+
+        <!-- Link zurück zum Adminbereich -->
+        <p>
+            <a href="{{ url_for('admin_panel') }}" class="back-link">Zurück zum Adminbereich</a>
+        </p>
+    </div>
+</body>
+</html>

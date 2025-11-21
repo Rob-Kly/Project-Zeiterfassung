@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Adminbereich</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Überlagerung zur Abdunklung des Hintergrundbilds -->
+    <div class="overlay"></div>
+
+    <!-- Logout-Schaltfläche oben rechts -->
+    <div class="top-right-logout">
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    <!-- Hauptinhalt des Adminbereichs -->
+    <div class="content">
+
+        <!-- Begrüßung mit Administratornamen -->
+        <h1>Administratorbereich – Willkommen, {{ name }}</h1>
+
+        <!-- Kommen/Gehen-Funktion für den angemeldeten Admin -->
+        <button onclick="clockUser('{{ admin_id }}')">Kommen / Gehen</button>
+        <pre id="response"></pre>
+
+        <!-- Hinweis auf offene automatische Korrekturen -->
+        {% if has_pending_corrections %}
+        <div class="warning-box">
+            <span class="warning-icon">⚠️</span>
+            <span>
+                Neue automatisch gesetzte Buchungen erkannt.<br>
+                <a href="{{ url_for('fix_errors') }}" class="warning-link">Fehlerzeiten korrigieren</a>
+            </span>
+        </div>
+        {% endif %}
+
+        <hr>
+
+        <!-- Abschnitt: Benutzerverwaltung -->
+        <h2 class="section-header-row">
+            Benutzerverwaltung
+            <a href="{{ url_for('fix_errors') }}" class="manage-fixerrors-link">Fehlerzeiten korrigieren</a>
+        </h2>
+
+        <!-- Tabelle mit allen registrierten Benutzern -->
+        <table>
+            <tr><th>User-ID</th><th>Name</th><th>Rolle</th><th>Aktionen</th></tr>
+            {% for uid, user in users.items() %}
+                <tr>
+                    <td>{{ uid }}</td>
+                    <td><a href="{{ url_for('admin_view_user', user_id=uid) }}">{{ user.first_name }} {{ user.last_name }}</a></td>
+                    <td>{{ user.role }}</td>
+                    <td><a href="{{ url_for('admin_edit_user', user_id=uid) }}">Bearbeiten</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+
+        {% from "user_form_macros.html" import user_form %}
+
+        <!-- Bereich: Neuen Benutzer anlegen (aufklappbar) -->
+        <div class="add-user-container">
+            <button class="add-user-toggle" type="button"
+                    onclick="toggleAddUser()">Neuen Benutzer anlegen ▼</button>
+
+            <div id="add-user-form" class="add-user-form hidden">
+                <h3>Neuen Benutzer anlegen</h3>
+
+                <!-- Fehler bei der Anlage eines neuen Benutzers -->
+                {% if error %}
+                    <p class="error-message">{{ error }}</p>
+                {% endif %}
+
+                <!-- Formular für neuen Benutzer -->
+                <form method="POST" action="{{ url_for('admin_add_user') }}" class="compact-user-form">
+                    {{ user_form(user=None, password_required=True, show_role=True) }}
+                    <button type="submit" class="submit-user-button">Benutzer anlegen</button>
+                </form>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Abschnitt: Monatsreport für den aktuellen Monat -->
+        <h2>Monatsreport ({{ report.year }}-{{ '%02d' % report.month }})</h2>
+
+        <!-- Link zu früheren Monatsreports -->
+        <p>
+            <a href="{{ url_for('admin_reports_list') }}" class="reports-link">
+                Vergangene Monatsreports anzeigen
+            </a>
+        </p>
+
+        <!-- Tabelle mit Gesamtstunden pro Benutzer -->
+        <table>
+            <tr><th>User-ID</th><th>Name</th><th>Gesamtstunden</th></tr>
+            {% for uid, data in report.users.items() %}
+                <tr>
+                    <td>{{ uid }}</td>
+                    <td>{{ data.name }}</td>
+                    <td>{{ data.total_hm }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+
+    </div>
+
+    <script>
+    // Senden einer Kommen-/Gehen-Buchung für den Admin
+    async function clockUser(userId) {
+        const responseBox = document.getElementById("response");
+        if (responseBox) {
+            responseBox.innerText = "Wird gesendet...";
+        }
+        try {
+            const response = await fetch("/api/clock", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId })
+            });
+            const data = await response.json();
+            if (responseBox) {
+                responseBox.innerText = data.message || "Unbekannte Antwort.";
+            }
+            setTimeout(() => window.location.reload(), 2000);
+        } catch {
+            if (responseBox) {
+                responseBox.innerText = "Fehler beim Senden der Anfrage.";
+            }
+        }
+    }
+
+    // Ein- und Ausklappen des Formulars "Neuen Benutzer anlegen"
+    function toggleAddUser() {
+        const form = document.getElementById("add-user-form");
+        const button = document.querySelector(".add-user-toggle");
+
+        form.classList.toggle("hidden");
+
+        if (form.classList.contains("hidden")) {
+            button.textContent = "Neuen Benutzer anlegen ▼";
+        } else {
+            button.textContent = "Neuen Benutzer anlegen ▲";
+        }
+    }
+    </script>
+</body>
+</html>
