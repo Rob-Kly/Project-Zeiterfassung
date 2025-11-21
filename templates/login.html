@@ -23,14 +23,25 @@
     <!-- Login-Formular -->
     <div class="Tabelle">
         <form method="POST">
-            <label for="username">Benutzername (Vorname Nachname):</label>
+
+            <!-- Benutzername -->
+            <label for="username">Benutzername (Format: Vorname.Nachname):</label>
             <input class="Feld" id="username" type="text" name="username" required>
 
+            <!-- Statischer Hinweis unter dem Benutzernamen -->
+            <p class="password-hint">
+                Bitte den Benutzernamen im Format <strong>"Vorname.Nachname"</strong> eingeben,
+                z. B. <em>Max.Mustermann</em>
+            </p>
+
+            <!-- Passwort -->
             <label for="password">Passwort:</label>
             <input class="Feld" id="password" type="password" name="password" required>
 
+            <!-- Abschicken -->
             <button class="Anmelden" type="submit">Anmelden</button>
         </form>
     </div>
+
 </body>
 </html>
