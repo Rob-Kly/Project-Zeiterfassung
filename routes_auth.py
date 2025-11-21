@@ -36,22 +36,30 @@ def init_auth_routes(app):
     def login():
         """
         Login-Seite für Benutzer und Administratoren.
-        Benutzername = 'Vorname Nachname', Passwort laut userlist.txt.
+        Benutzername = 'Vorname.Nachname', Passwort laut userlist.txt.
         """
         userlist = load_userlist()
         error = None
 
         if request.method == "POST":
-            username = request.form.get("username")
-            password = request.form.get("password")
+            username = (request.form.get("username") or "").strip()
+            password = request.form.get("password") or ""
 
             matched_user_id = None
             matched_user = None
 
+            # Eingabe normalisieren: Leerzeichen entfernen, Kleinschreibung
+            input_norm = username.lower().replace(" ", "")
+
             # Benutzer + Passwort suchen
             for user_id, user in userlist.items():
-                full_name = f"{user['first_name']} {user['last_name']}"
-                if username == full_name and user.get("password") == password:
+                first = (user.get("first_name") or "").strip().lower()
+                last = (user.get("last_name") or "").strip().lower()
+
+                # Erwartetes Loginformat: vorname.nachname
+                expected_login = f"{first}.{last}"
+
+                if input_norm == expected_login and user.get("password") == password:
                     matched_user_id = user_id
                     matched_user = user
                     break
