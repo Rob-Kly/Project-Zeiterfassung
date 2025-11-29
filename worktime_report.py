@@ -19,77 +19,44 @@ Aufgaben:
 # ==========================================================
 # ARBEITSZEIT FÜR EINEN NUTZER BERECHNEN
 # ==========================================================
-def get_worked_hours(user_id: str, start_date: str, end_date: str) -> dict:
+def get_pending_corrections_for_user(user_id):
     """
-    Berechnet die geleisteten Arbeitsstunden eines Nutzers im angegebenen Zeitraum.
-
-    :param user_id: ID des Nutzers (z.B. "1")
-    :param start_date: Startdatum (inklusive) im Format "YYYY-MM-DD"
-    :param end_date: Enddatum (inklusive) im Format "YYYY-MM-DD"
-    :return: Dictionary mit Gesamtzeit und Tages-Details, z.B.:
-        {
-            "user_id": "1",
-            "name": "Max Mustermann",
-            "total_hours": 40.0,
-            "total_hm": "40h 0m",
-            "details": [
-                {
-                    "date": "2025-11-01",
-                    "worked_hours": 8.0,
-                    "worked_hm": "8h 0m",
-                },
-                ...
-            ]
-        }
+    Gibt alle automatischen Einträge eines Nutzers zurück,
+    die noch nicht bestätigt wurden.
     """
     userlist = load_userlist()
     if user_id not in userlist:
-        return {"error": f"Unbekannte User-ID {user_id}"}
+        return []
 
-    user_data = userlist[user_id]
-    user_folder = user_data["folder"]
-    timestamps_path = os.path.join(user_folder, f"{user_folder}_timestamps.txt")
-    timestamps = load_timestamps(timestamps_path)
+    user = userlist[user_id]
+    folder = user["folder"]
+    path = os.path.join(folder, f"{folder}_timestamps.txt")
+    timestamps = load_timestamps(path)
 
-    # Zeitfenster berechnen (end_date inklusive → +1 Tag)
-    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-    end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-
-    total_seconds = 0
-    details: dict[str, float] = {}
-    current_in: datetime | None = None
+    results = []
 
     for entry in timestamps:
-        ts_time = datetime.strptime(entry["time"], "%Y-%m-%d %H:%M:%S")
-
-        # Nur Einträge innerhalb des gewählten Zeitraums berücksichtigen
-        if not (start_dt <= ts_time < end_dt):
+        # Nur automatische Einträge
+        if not entry.get("auto"):
             continue
 
-        if entry["type"] == "in":
-            current_in = ts_time
-        elif entry["type"] == "out" and current_in:
-            worked = (ts_time - current_in).total_seconds()
-            total_seconds += worked
+        # Bereits bearbeitet/akzeptiert → ignorieren
+        if entry.get("auto_confirmed"):
+            continue
 
-            day_str = current_in.strftime("%Y-%m-%d")
-            details[day_str] = details.get(day_str, 0.0) + worked / 3600.0
-            current_in = None
+        # Datum extrahieren
+        try:
+            dt = datetime.strptime(entry["time"], "%Y-%m-%d %H:%M:%S")
+        except:
+            continue
 
-    return {
-        "user_id": user_id,
-        "name": f"{user_data['first_name']} {user_data['last_name']}",
-        "total_hours": round(total_seconds / 3600, 2),
-        "total_hm": seconds_to_hours_minutes_str(total_seconds),
-        "details": [
-            {
-                "date": d,
-                "worked_hours": round(h, 2),
-                "worked_hm": seconds_to_hours_minutes_str(h * 3600),
-            }
-            for d, h in sorted(details.items())
-        ],
-    }
+        results.append({
+            "date": dt.strftime("%Y-%m-%d"),
+            "type": entry.get("type")
+        })
+
+    return results
+
 
 
 # ==========================================================
