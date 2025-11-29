@@ -44,12 +44,18 @@ def log_error(user_id: str, user_name: str, message: str) -> None:
 # ==========================================================
 # ZEITBUCHUNG (KOMMEN / GEHEN)
 # ==========================================================
-def clock(user_id: str) -> str:
+def clock(user_id):
     """
-    Registriert eine An- oder Abmeldung für einen Benutzer.
+    Führt eine Kommen-/Gehen-Buchung für den angegebenen Nutzer aus.
 
-    Behandelt automatisch Fehlerfälle (vergessene Logins/Logouts)
-    und setzt ggf. ein Flag für neue automatische Korrekturen.
+    Verhalten:
+    - Wenn der letzte Eintrag ein "in" ist:
+        - und am Vortag liegt → Auto-Logout am Vortag, neuer Login heute
+        - und heute liegt        → normales Logout (mit Dauer)
+    - Wenn kein aktiver Login existiert:
+        - und heute noch kein "in" und Uhrzeit >= DEFAULT_LATE_LOGIN
+              → Auto-Login morgens + Auto-Logout jetzt (beide als auto=True)
+        - sonst → normaler Login
     """
     userlist = load_userlist()
     if user_id not in userlist:
@@ -57,120 +63,140 @@ def clock(user_id: str) -> str:
 
     user_data = userlist[user_id]
     user_folder = user_data["folder"]
+    os.makedirs(user_folder, exist_ok=True)
+
     timestamps_path = os.path.join(user_folder, f"{user_folder}_timestamps.txt")
-
     timestamps = load_timestamps(timestamps_path)
+
     now_dt = datetime.now()
+    now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    today_str = now_dt.strftime("%Y-%m-%d")
 
-    # ----------------------------------------------------------
-    # Fall A: Letzter Eintrag war "in" → normaler oder vergessener Logout
-    # ----------------------------------------------------------
-    if timestamps and timestamps[-1]["type"] == "in":
-        last_in = datetime.strptime(timestamps[-1]["time"], "%Y-%m-%d %H:%M:%S")
+    # Letzten Eintrag bestimmen (falls vorhanden)
+    last_entry = timestamps[-1] if timestamps else None
+    last_type = last_entry["type"] if last_entry else None
 
-        if last_in.date() < now_dt.date():
-            # Vergessenes Logout am Vortag → automatischer Logout um DEFAULT_WORK_END
+    # ==========================================================
+    # Fall A: Letzter Eintrag war "in" → jetzt "out" buchen
+    # ==========================================================
+    if last_type == "in":
+        try:
+            last_in = datetime.strptime(last_entry["time"], "%Y-%m-%d %H:%M:%S")
+        except (KeyError, ValueError):
+            last_in = None
+
+        if last_in is not None and last_in.date() < now_dt.date():
+            # Vortag war noch angemeldet → Auto-Logout am DEFAULT_WORK_END
             auto_out = last_in.replace(
                 hour=DEFAULT_WORK_END[0],
                 minute=DEFAULT_WORK_END[1],
-                second=DEFAULT_WORK_END[2],
+                second=0,
             )
-            timestamps.append(
-                {"type": "out", "time": auto_out.strftime("%Y-%m-%d %H:%M:%S")}
-            )
+            auto_out_str = auto_out.strftime("%Y-%m-%d %H:%M:%S")
 
-            log_error(
-                user_id,
-                f"{user_data['first_name']} {user_data['last_name']}",
-                (
-                    "Logout am {date} vergessen → Auto-Logout "
-                    "{end_h:02d}:{end_m:02d} gesetzt"
-                ).format(
-                    date=last_in.date(),
-                    end_h=DEFAULT_WORK_END[0],
-                    end_m=DEFAULT_WORK_END[1],
-                ),
-            )
+            timestamps.append({
+                "time": auto_out_str,
+                "type": "out",
+                "auto": True,
+            })
 
-            # Flag für neue automatische Korrekturen setzen
+            # Neuen Arbeitstag mit Login starten
+            timestamps.append({
+                "time": now_str,
+                "type": "in",
+                "auto": False,
+            })
+
+            save_timestamps(timestamps_path, timestamps)
             set_pending_corrections_flag(True)
 
-            action = "in"
             message = (
                 f"Nutzer {user_id} ({user_data['first_name']} "
                 f"{user_data['last_name']}) hat den Vortag nicht abgemeldet. "
                 f"Automatische Abmeldung um {auto_out.strftime('%H:%M')} gesetzt. "
                 "Neuer Arbeitstag gestartet (angemeldet)."
             )
+            return message
         else:
-            # Normales Logout
-            duration = now_dt - last_in
-            duration_str = seconds_to_hours_minutes_str(duration.total_seconds())
-            action = "out"
+            # Normales Logout am selben Tag
+            if last_in is not None:
+                duration = now_dt - last_in
+                duration_str = seconds_to_hours_minutes_str(duration.total_seconds())
+            else:
+                duration_str = "unbekannt"
+
+            timestamps.append({
+                "time": now_str,
+                "type": "out",
+                "auto": False,
+            })
+
+            save_timestamps(timestamps_path, timestamps)
+
             message = (
                 f"Nutzer {user_id} ({user_data['first_name']} "
                 f"{user_data['last_name']}) hat sich abgemeldet. "
                 f"Sitzungslänge: {duration_str}."
             )
+            return message
 
-    # ----------------------------------------------------------
+    # ==========================================================
     # Fall B: Kein aktiver Login → prüfen, ob Login vergessen wurde
-    # ----------------------------------------------------------
-    else:
-        today_str = now_dt.strftime("%Y-%m-%d")
-        has_in_today = any(
-            ts["type"] == "in" and ts["time"].startswith(today_str)
-            for ts in timestamps
+    # ==========================================================
+    has_in_today = False
+    for ts in timestamps:
+        if ts.get("type") == "in" and ts.get("time", "").startswith(today_str):
+            has_in_today = True
+            break
+
+    if not has_in_today and now_dt.hour >= DEFAULT_LATE_LOGIN:
+        # Login am Morgen vergessen → Auto-Login um DEFAULT_WORK_START + Auto-Logout jetzt
+        auto_in = now_dt.replace(
+            hour=DEFAULT_WORK_START[0],
+            minute=DEFAULT_WORK_START[1],
+            second=0,
         )
+        auto_in_str = auto_in.strftime("%Y-%m-%d %H:%M:%S")
 
-        if not has_in_today and now_dt.hour >= DEFAULT_LATE_LOGIN:
-            # Login am Morgen vergessen → Auto-Login um DEFAULT_WORK_START + aktueller Logout
-            auto_in = now_dt.replace(
-                hour=DEFAULT_WORK_START[0],
-                minute=DEFAULT_WORK_START[1],
-                second=DEFAULT_WORK_START[2],
-            )
-            timestamps.append(
-                {"type": "in", "time": auto_in.strftime("%Y-%m-%d %H:%M:%S")}
-            )
+        timestamps.append({
+            "time": auto_in_str,
+            "type": "in",
+            "auto": True,
+        })
 
-            log_error(
-                user_id,
-                f"{user_data['first_name']} {user_data['last_name']}",
-                (
-                    "Login am Morgen vergessen → Auto-Login "
-                    "{start_h:02d}:{start_m:02d} gesetzt, sofortiges Logout"
-                ).format(
-                    start_h=DEFAULT_WORK_START[0],
-                    start_m=DEFAULT_WORK_START[1],
-                ),
-            )
+        timestamps.append({
+            "time": now_str,
+            "type": "out",
+            "auto": True,
+        })
 
-            # Flag für neue automatische Korrekturen setzen
-            set_pending_corrections_flag(True)
+        save_timestamps(timestamps_path, timestamps)
+        set_pending_corrections_flag(True)
 
-            action = "out"
-            message = (
-                f"Nutzer {user_id} ({user_data['first_name']} "
-                f"{user_data['last_name']}) hat vergessen, sich morgens anzumelden. "
-                f"Automatisches Login um {auto_in.strftime('%H:%M')} gesetzt. "
-                "Jetzt abgemeldet."
-            )
-        else:
-            # Normales Login
-            action = "in"
-            message = (
-                f"Nutzer {user_id} ({user_data['first_name']} "
-                f"{user_data['last_name']}) hat sich angemeldet."
-            )
+        message = (
+            f"Nutzer {user_id} ({user_data['first_name']} "
+            f"{user_data['last_name']}) hat den Login am Morgen vergessen. "
+            f"Automatischer Login um {auto_in.strftime('%H:%M')} und "
+            f"Logout um {now_dt.strftime('%H:%M')} gesetzt."
+        )
+        return message
 
-    # ----------------------------------------------------------
-    # Zeitstempel speichern
-    # ----------------------------------------------------------
-    timestamps.append({"type": action, "time": now_dt.strftime("%Y-%m-%d %H:%M:%S")})
+    # ==========================================================
+    # Fall C: Normaler Login
+    # ==========================================================
+    timestamps.append({
+        "time": now_str,
+        "type": "in",
+        "auto": False,
+    })
     save_timestamps(timestamps_path, timestamps)
 
+    message = (
+        f"Nutzer {user_id} ({user_data['first_name']} "
+        f"{user_data['last_name']}) hat sich angemeldet um {now_dt.strftime('%H:%M')}."
+    )
     return message
+
 
 
 # ==========================================================
