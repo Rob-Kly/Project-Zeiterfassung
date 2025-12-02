@@ -146,7 +146,7 @@ def export_monthly_report_json(year: int, month: int) -> str:
     return f"Monatsreport {month:02d}/{year} wurde nach '{filename}' exportiert."
 
 # ==========================================================
-# Fehlerzeiten Heraussuchen
+# AUTOMATISCHE KORREKTUREN FÜR EINEN NUTZER AUSLESEN
 # ==========================================================
 
 
