@@ -42,7 +42,7 @@ def init_auth_routes(app):
         error = None
         # Wenn noch kein Admin existiert → Erstinstallation starten
         if not userlist or not any(u.get("role") == "admin" for u in userlist.values()):
-        return redirect(url_for("setup_admin"))
+            return redirect(url_for("setup_admin"))
 
 
         if request.method == "POST":
